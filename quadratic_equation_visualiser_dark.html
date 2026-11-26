@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quadratic Equation Visualiser</title>
+<style>
+  :root { color-scheme: dark; --ink:#e7edf7; --muted:#9aa9bd; --line:#334155; --blue:#82aaff; --paper:#0b1220; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:22px; background:var(--paper); color:var(--ink); font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif; }
+  .app { max-width:1100px; margin:auto; }
+  h1 { margin:0 0 5px; font-size:clamp(24px,4vw,34px); }
+  .sub { color:var(--muted); margin:0 0 20px; }
+  .layout { display:grid; grid-template-columns: minmax(250px,320px) 1fr; gap:16px; align-items:start; }
+  .panel,.graph-panel,.cases { background:#141e2e; border:1px solid var(--line); border-radius:16px; padding:18px; box-shadow:0 6px 22px #00000030; }
+  .controls h2,.graph-panel h2,.cases h2 { font-size:17px; margin:0 0 14px; }
+  .control { margin:17px 0; }
+  .control-head { display:flex; justify-content:space-between; align-items:center; font-weight:650; }
+  output { font-variant-numeric:tabular-nums; color:#a9c2ff; background:#223252; padding:3px 9px; border-radius:8px; }
+  input[type=range] { width:100%; accent-color:var(--blue); margin:12px 0 3px; }
+  .hint { color:var(--muted); font-size:12px; }
+  .quick { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-top:16px; }
+  button { border:1px solid var(--line); background:#1c293d; color:var(--ink); padding:9px 8px; border-radius:9px; cursor:pointer; font-weight:600; }
+  button:hover { border-color:var(--blue); background:#263957; }
+  .quick button { font-size:12px; }
+  .equation { font-size:clamp(18px,3vw,24px); font-weight:700; margin:4px 0 8px; overflow-wrap:anywhere; }
+  .status { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+  .pill { padding:5px 10px; border-radius:999px; background:#263449; color:#d5deeb; font-size:13px; font-weight:650; }
+  .pill.good { background:#153b30; color:#8ee0b2; }
+  .pill.warn { background:#49351b; color:#ffd28a; }
+  svg { display:block; width:100%; height:auto; background:#101a2a; border:1px solid #2b3a50; border-radius:10px; }
+  .math-note { color:var(--muted); font-size:13px; margin-top:10px; }
+  .cases { margin-top:16px; }
+  .case-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+  .case { border:1px solid var(--line); border-radius:11px; padding:10px; text-align:left; background:#182437; }
+  .case strong { display:block; font-size:13px; }
+  .case span { color:var(--muted); font-size:12px; }
+  .case.active { border:2px solid var(--blue); background:#203253; padding:9px; }
+  @media(max-width:760px) { body{padding:12px}.layout{grid-template-columns:1fr}.case-grid{grid-template-columns:repeat(2,1fr)} }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Quadratic Equation Visualiser</h1>
+  <p class="sub">Change a, b and c to explore how the parabola and its roots behave.</p>
+  <div class="layout">
+    <section class="panel controls">
+      <h2>Coefficient sliders</h2>
+      <div class="control">
+        <div class="control-head"><label for="a">a — opening direction</label><output id="av">1</output></div>
+        <input id="a" type="range" min="-5" max="5" step="0.1" value="1">
+        <div class="hint">Positive: opens up · Negative: opens down · a cannot be zero</div>
+      </div>
+      <div class="control">
+        <div class="control-head"><label for="b">b — horizontal position</label><output id="bv">0</output></div>
+        <input id="b" type="range" min="-10" max="10" step="0.5" value="0">
+      </div>
+      <div class="control">
+        <div class="control-head"><label for="c">c — vertical position</label><output id="cv">-4</output></div>
+        <input id="c" type="range" min="-10" max="10" step="0.5" value="-4">
+      </div>
+      <div class="quick">
+        <button data-v="1,0,-4">a+ · D+</button>
+        <button data-v="1,0,0">a+ · D=0</button>
+        <button data-v="1,0,2">a+ · D−</button>
+        <button data-v="-1,0,4">a− · D+</button>
+        <button data-v="-1,0,0">a− · D=0</button>
+        <button data-v="-1,0,-2">a− · D−</button>
+      </div>
+      <p class="hint">Tip: use the six preset buttons to jump straight to each standard case.</p>
+    </section>
+    <section class="graph-panel">
+      <h2>Live graph</h2>
+      <div class="equation" id="equation">y = x² − 4</div>
+      <div class="status">
+        <span class="pill" id="disc">D = 16</span>
+        <span class="pill good" id="roots">2 distinct real roots</span>
+        <span class="pill" id="opens">Opens upwards</span>
+      </div>
+      <svg id="plot" viewBox="0 0 700 430" role="img" aria-label="Graph of the quadratic function"></svg>
+      <p class="math-note" id="details">The curve crosses the x-axis at two points.</p>
+    </section>
+  </div>
+  <section class="cases">
+    <h2>The six standard cases</h2>
+    <div class="case-grid" id="caseGrid">
+      <div class="case" data-case="up-positive"><strong>1. a &gt; 0, D &gt; 0</strong><span>Opens up · crosses twice</span></div>
+      <div class="case" data-case="up-zero"><strong>2. a &gt; 0, D = 0</strong><span>Opens up · touches once</span></div>
+      <div class="case" data-case="up-negative"><strong>3. a &gt; 0, D &lt; 0</strong><span>Opens up · no real roots</span></div>
+      <div class="case" data-case="down-positive"><strong>4. a &lt; 0, D &gt; 0</strong><span>Opens down · crosses twice</span></div>
+      <div class="case" data-case="down-zero"><strong>5. a &lt; 0, D = 0</strong><span>Opens down · touches once</span></div>
+      <div class="case" data-case="down-negative"><strong>6. a &lt; 0, D &lt; 0</strong><span>Opens down · no real roots</span></div>
+    </div>
+  </section>
+  <p class="math-note">Key idea: the sign of <b>a</b> determines the direction the parabola opens. The discriminant <b>D = b² − 4ac</b> determines the number of real roots.</p>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const sliders = ['a','b','c'];
+const fmt = n => Number(n.toFixed(2)).toString();
+function signedTerm(n, suffix='') {
+  if (Math.abs(n) < 1e-9) return '';
+  return (n < 0 ? ' − ' : ' + ') + (Math.abs(n) === 1 && suffix ? '' : fmt(Math.abs(n))) + suffix;
+}
+function equationText(a,b,c) {
+  let s = (a < 0 ? '−' : '') + (Math.abs(a) === 1 ? '' : fmt(Math.abs(a))) + 'x²';
+  s += signedTerm(b,'x') + signedTerm(c);
+  return 'y = ' + s;
+}
+function render() {
+  let a=+$('a').value, b=+$('b').value, c=+$('c').value;
+  if (Math.abs(a)<0.05) { a = a < 0 ? -0.1 : 0.1; $('a').value=a; }
+  sliders.forEach(k => $(k+'v').textContent=fmt(+$ (k).value));
+  const D=b*b-4*a*c, eps=1e-7;
+  $('equation').textContent=equationText(a,b,c);
+  $('disc').textContent='D = '+fmt(D);
+  $('opens').textContent=a>0?'Opens upwards':'Opens downwards';
+  const signD = D>eps?1:D < -eps?-1:0;
+  $('roots').textContent=signD>0?'2 distinct real roots':signD===0?'1 repeated real root':'No real roots';
+  $('roots').className='pill '+(signD>0?'good':signD===0?'':'warn');
+  $('details').textContent=signD>0?'The curve crosses the x-axis at two distinct points.':signD===0?'The curve touches the x-axis at its vertex.':'The curve does not intersect the x-axis; its roots are complex.';
+  const key=(a>0?'up-':'down-')+(signD>0?'positive':signD===0?'zero':'negative');
+  document.querySelectorAll('.case').forEach(el=>el.classList.toggle('active',el.dataset.case===key));
+  draw(a,b,c);
+}
+function draw(a,b,c) {
+  const W=700,H=430,L=48,R=18,T=18,B=38, pw=W-L-R, ph=H-T-B;
+  const vx=-b/(2*a), vy=a*vx*vx+b*vx+c;
+  let xspan=Math.max(5,Math.min(12,Math.abs(vx)+4));
+  let xmin=Math.min(-xspan,vx-4), xmax=Math.max(xspan,vx+4);
+  const vals=[];
+  for(let i=0;i<=160;i++){let x=xmin+(xmax-xmin)*i/160;vals.push(a*x*x+b*x+c);}
+  const ymin=Math.min(-3,...vals), ymax=Math.max(3,...vals);
+  const pad=(ymax-ymin)*.08, y0=ymin-pad, y1=ymax+pad;
+  const X=x=>L+(x-xmin)/(xmax-xmin)*pw, Y=y=>T+(y1-y)/(y1-y0)*ph;
+  let s='';
+  for(let i=Math.ceil(xmin);i<=Math.floor(xmax);i++){
+    let x=X(i); s+=`<line x1="${x}" y1="${T}" x2="${x}" y2="${T+ph}" stroke="#263449"/><text x="${x}" y="${H-13}" text-anchor="middle" font-size="11" fill="#9aa9bd">${i}</text>`;
+  }
+  for(let i=Math.ceil(y0);i<=Math.floor(y1);i++){
+    let y=Y(i); s+=`<line x1="${L}" y1="${y}" x2="${W-R}" y2="${y}" stroke="#263449"/><text x="${L-9}" y="${y+4}" text-anchor="end" font-size="11" fill="#9aa9bd">${i}</text>`;
+  }
+  if(xmin<=0&&xmax>=0)s+=`<line x1="${X(0)}" y1="${T}" x2="${X(0)}" y2="${T+ph}" stroke="#8496ad" stroke-width="1.7"/>`;
+  if(y0<=0&&y1>=0)s+=`<line x1="${L}" y1="${Y(0)}" x2="${W-R}" y2="${Y(0)}" stroke="#8496ad" stroke-width="1.7"/>`;
+  let d='';
+  for(let i=0;i<=500;i++){let x=xmin+(xmax-xmin)*i/500,y=a*x*x+b*x+c;d+=(i?'L':'M')+X(x).toFixed(2)+','+Y(y).toFixed(2)+' ';}
+  s+=`<path d="${d}" fill="none" stroke="#3867d6" stroke-width="3.5" stroke-linecap="round"/>`;
+  s+=`<circle cx="${X(vx)}" cy="${Y(vy)}" r="5" fill="#e08b32" stroke="white" stroke-width="2"/>`;
+  s+=`<text x="${Math.min(W-140,X(vx)+10)}" y="${Math.max(30,Y(vy)-12)}" font-size="12" fill="#ffc078">vertex</text>`;
+  $('plot').innerHTML=s;
+}
+sliders.forEach(k=>$(k).addEventListener('input',render));
+document.querySelectorAll('[data-v]').forEach(btn=>btn.addEventListener('click',()=>{
+  const [a,b,c]=btn.dataset.v.split(',');
+  $('a').value=a;$('b').value=b;$('c').value=c;render();
+}));
+render();
+</script>
+</body>
+</html>
